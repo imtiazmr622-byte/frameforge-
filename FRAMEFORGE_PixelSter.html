@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FRAMEFORGE — AI Image Studio</title>
+<style>
+:root{--bg:#f3edff;--card:#fff;--ink:#211a35;--muted:#766b8e;--accent:#7657e8;--accent2:#9b7cff;--line:#e5dcf7;--ok:#16855b;--bad:#c0395a}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(135deg,#f7f2ff,#eee7ff);font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;color:var(--ink)}
+.wrap{max-width:1100px;margin:auto;padding:22px 15px 50px}.brand{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}.brand h1{margin:0;font-size:25px;letter-spacing:.5px}.badge{background:#e9e0ff;color:#5e43bd;border:1px solid #d8c9ff;padding:7px 11px;border-radius:999px;font-size:12px;font-weight:700}
+.card{background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:20px;padding:18px;margin:14px 0;box-shadow:0 10px 30px rgba(73,47,130,.07)}
+label{display:block;font-size:13px;font-weight:800;margin:0 0 8px}.prompt{width:100%;min-height:125px;resize:vertical;border:1px solid var(--line);border-radius:14px;padding:14px;font-size:15px;outline:none;background:#fcfbff;color:var(--ink)}.prompt:focus{border-color:var(--accent)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.controls{display:grid;grid-template-columns:1fr 1fr;gap:12px}.select,.num{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);font-weight:700}
+.upload{border:2px dashed #cbbcf0;border-radius:15px;padding:16px;text-align:center;background:#fbf9ff}.upload input{display:none}.upload button{border:0;background:#eee7ff;color:#5d43bd;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer}.preview{display:none;margin-top:10px;position:relative}.preview img{width:100%;max-height:240px;object-fit:contain;border-radius:12px;background:#f4efff}.remove{position:absolute;right:8px;top:8px;border:0;background:#fff;color:#b3294c;border-radius:8px;padding:6px 9px;font-weight:800;cursor:pointer}
+.ratios{display:flex;flex-wrap:wrap;gap:8px}.ratio{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 12px;cursor:pointer;font-weight:800;color:#65577c}.ratio.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.actions{display:flex;gap:10px;flex-wrap:wrap}.generate{flex:1;min-width:180px;border:0;background:linear-gradient(135deg,#7657e8,#9b6cf3);color:#fff;border-radius:13px;padding:14px 18px;font-size:16px;font-weight:900;cursor:pointer}.secondary{border:1px solid var(--line);background:#fff;color:#55466f;border-radius:13px;padding:12px 16px;font-weight:800;cursor:pointer}.generate:disabled{opacity:.55;cursor:not-allowed}
+.status{font-size:13px;color:var(--muted);margin-top:10px;min-height:18px}.status.ok{color:var(--ok)}.status.bad{color:var(--bad)}
+.results{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}.item{background:#fbfaff;border:1px solid var(--line);border-radius:15px;overflow:hidden}.item img{width:100%;display:block;aspect-ratio:1/1;object-fit:cover;background:#eee}.item .bar{padding:9px;display:flex;gap:7px}.item a,.item button{flex:1;text-align:center;border:1px solid var(--line);background:#fff;color:#55466f;border-radius:9px;padding:8px;text-decoration:none;font-size:12px;font-weight:800;cursor:pointer}.empty{text-align:center;color:var(--muted);padding:28px 10px}
+small{color:var(--muted)}@media(max-width:760px){.grid,.controls{grid-template-columns:1fr}.results{grid-template-columns:repeat(2,1fr)}.brand{align-items:flex-start;gap:10px}.brand h1{font-size:21px}}
+@media(max-width:430px){.results{grid-template-columns:1fr}.wrap{padding:15px 10px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><h1>FRAMEFORGE</h1><div class="badge">AI IMAGE STUDIO</div></div>
+
+  <section class="card">
+    <label>Prompt</label>
+    <textarea id="prompt" class="prompt" placeholder="Describe the image you want..."></textarea>
+    <small>For multiple images, use one prompt per line or use Copies.</small>
+  </section>
+
+  <section class="card">
+    <div class="grid">
+      <div>
+        <label>Reference Picture — 1 only (optional)</label>
+        <div class="upload">
+          <input id="ref" type="file" accept="image/png,image/jpeg,image/webp">
+          <button onclick="ref.click()">Upload Reference Picture</button>
+          <div id="refPreview" class="preview"><img id="refImg"><button class="remove" onclick="clearRef()">Remove</button></div>
+          <small>JPG, PNG or WebP • keep under 3.5 MB</small>
+        </div>
+      </div>
+      <div>
+        <label>Images to Generate</label>
+        <input id="copies" class="num" type="number" min="1" max="50" value="1">
+        <div style="height:12px"></div>
+        <label>Aspect Ratio</label>
+        <div id="ratios" class="ratios"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="actions">
+      <button id="generate" class="generate">Generate Images</button>
+      <button class="secondary" onclick="clearResults()">Clear Results</button>
+    </div>
+    <div id="status" class="status"></div>
+  </section>
+
+  <section class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px">
+      <label style="margin:0">Results</label><button id="downloadAll" class="secondary" style="display:none">Download All</button>
+    </div>
+    <div id="results" class="results"><div class="empty">Generated images will appear here.</div></div>
+  </section>
+</div>
+
+<script>
+const API='https://ahm7xmakki.com/api';
+const ratios=['1:1','16:9','9:16','4:3','3:4','2:1','1:2','3:2','2:3','4:5','5:4'];
+let selectedRatio='1:1', refData=null, urls=[];
+const $=id=>document.getElementById(id);
+ratios.forEach(r=>{let b=document.createElement('button');b.className='ratio'+(r==='1:1'?' active':'');b.textContent=r;b.onclick=()=>{selectedRatio=r;document.querySelectorAll('.ratio').forEach(x=>x.classList.remove('active'));b.classList.add('active')};$('ratios').appendChild(b)});
+
+$('ref').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f)return;
+  if(f.size>3.5*1024*1024){setStatus('Reference image must be under 3.5 MB.','bad');e.target.value='';return}
+  const rd=new FileReader(); rd.onload=()=>{refData=rd.result;$('refImg').src=refData;$('refPreview').style.display='block'}; rd.readAsDataURL(f);
+});
+function clearRef(){refData=null;$('ref').value='';$('refPreview').style.display='none'}
+function setStatus(t,c=''){ $('status').textContent=t;$('status').className='status '+c }
+function clearResults(){urls=[];$('results').innerHTML='<div class="empty">Generated images will appear here.</div>';$('downloadAll').style.display='none';setStatus('')}
+function addResult(url,n){if(!urls.includes(url))urls.push(url);let box=document.createElement('div');box.className='item';box.innerHTML=`<img src="${url}" alt="Generated image"><div class="bar"><a href="${url}" target="_blank" rel="noopener">Open</a><a href="${url}" download="frameforge-${n}.jpg">Download</a></div>`;if($('results').querySelector('.empty'))$('results').innerHTML='';$('results').appendChild(box)}
+$('downloadAll').onclick=()=>urls.forEach((u,i)=>{let a=document.createElement('a');a.href=u;a.download=`frameforge-${i+1}.jpg`;a.target='_blank';a.click()});
+
+async function generateOne(prompt,idx,total){
+  if(refData){
+    // PixelSter's documented image-to-image endpoint uses a source image plus prompt.
+    const res=await fetch(API+'/pti',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,ratio:selectedRatio,imageBase64:refData})});
+    if(!res.ok)throw new Error('Image-to-image request failed ('+res.status+')');
+    const d=await res.json(); if(!d.imageUrl)throw new Error(d.error||'No image URL returned');
+    return d.imageUrl;
+  }else{
+    const res=await fetch(API+'/tti',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,ratio:selectedRatio})});
+    if(!res.ok)throw new Error('Text-to-image request failed ('+res.status+')');
+    const d=await res.json(); if(!d.imageUrl)throw new Error(d.error||'No image URL returned');
+    return d.imageUrl;
+  }
+}
+$('generate').onclick=async()=>{
+  const raw=$('prompt').value.trim(); if(!raw){setStatus('Please enter a prompt.','bad');return}
+  const copies=Math.max(1,Math.min(50,parseInt($('copies').value)||1));
+  const prompts=raw.split(/\n+/).map(x=>x.trim()).filter(Boolean);
+  const jobs=[]; for(const p of prompts)for(let i=0;i<copies;i++)jobs.push(p);
+  if(jobs.length>50){setStatus('Maximum 50 images per batch. Reduce prompts or copies.','bad');return}
+  $('generate').disabled=true;clearResults();setStatus(`Generating 0 / ${jobs.length}...`);
+  let done=0,failed=0;
+  await Promise.all(jobs.map(async(p,i)=>{
+    try{const u=await generateOne(p,i,jobs.length);addResult(u,i+1)}catch(e){failed++;console.error(e)}
+    done++;setStatus(`Generating ${done} / ${jobs.length}${failed?' • '+failed+' failed':''}...`);
+  }));
+  $('generate').disabled=false;
+  if(urls.length){$('downloadAll').style.display='inline-block';setStatus(`Finished: ${urls.length} image(s) generated${failed?' • '+failed+' failed':''}.`,'ok')}
+  else setStatus('Generation failed. If PixelSter blocks browser requests, use the official PixelSter Studio or host this app through a proxy/server.','bad');
+};
+</script>
+</body>
+</html>
